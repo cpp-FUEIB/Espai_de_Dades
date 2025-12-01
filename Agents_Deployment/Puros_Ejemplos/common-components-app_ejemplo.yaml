@@ -23,7 +23,7 @@ spec:
             - dataprovider01
         project: default                            # Project to which the namespace is attached
         namespaceTag: common01                      # identifier of deployment and part of fqdn
-        domainSuffix: example.com                   # last part of fqdn
+        domainSuffix: 20.61.232.68.nip.io                 # last part of fqdn
         argocd:
           appname: common01                         # name of generated argocd app 
           namespace: argocd                         # namespace of your argocd
