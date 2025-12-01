@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dataprovider01-deployer
+spec:
+  project: default
+  source:
+    repoURL: 'https://code.europa.eu/api/v4/projects/904/packages/helm/stable'
+    chart: data-provider
+    targetRevision: 2.4.0
+    helm:
+      values: |
+        branch: v2.4.0
+        project: default
+        namespaceTag:
+          dataprovider: dataprovider01
+          authority: authority01
+          common: common01
+        domainSuffix: example.com
+        resourcePreset: default
+        argocd:
+          appname: dataprovider01
+          namespace: argocd
+        cluster:
+          address: https://kubernetes.default.svc
+          namespace: dataprovider01
+          commonToolsNamespace: common01
+          issuer: dev-prod
+        secrets:
+          role: example-role
+          secretEngine: example
+        crossplane:
+          enabled: true
+          kafka:
+            username: user
+            password: pass
+          gitea:
+            username: gitops_test
+            password: pass
+        monitoring:
+          enabled: true
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: dataprovider01
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
