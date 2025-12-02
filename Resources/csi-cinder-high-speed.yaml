@@ -4,7 +4,7 @@ metadata:
   name: csi-high-speed
 provisioner: disk.csi.azure.com
 parameters:
-  storageaccounttype: Premium_LRS
+  storageaccounttype: managed
 reclaimPolicy: Delete
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
