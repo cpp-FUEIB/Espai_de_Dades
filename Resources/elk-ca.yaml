@@ -1,0 +1,22 @@
+# ClusterIssuer self-signed
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: dev-prod
+spec:
+  selfSigned: {}
+
+---
+# Certificate CA
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: elk-ca-common01
+  namespace: common01
+spec:
+  secretName: elk-ca-common01-tls
+  issuerRef:
+    name: dev-prod
+    kind: ClusterIssuer
+  commonName: elk-ca-common01
+
