@@ -13,7 +13,7 @@ spec:
       values: |
         values:
           branch: v2.4.1                            # branch of repo with values
-        resourcePreset: default                     # set to "low" to disable requests of resources
+        resourcePreset: low                     # set to "low" to disable requests of resources
         agentList:                                  # list of all the agents to be deployed
           authorities:
             - authority01
@@ -38,7 +38,7 @@ spec:
           secretEngine: example                     # name of the kv secret engine that will be created in OpenBao
           role: example-role                        # name of the role that will be created in OpenBao
         kafka:
-          ha: true                                  # true creates 3 replicas of each component, false creates 1 of each
+          ha: false                                  # true creates 3 replicas of each component, false creates 1 of each
           topic:
             # set this value to true, to have kafka creating automatically the required topics
             autocreate: true
@@ -47,7 +47,7 @@ spec:
           enabled: true
         monitoring:
           # set this value to true, to enable the monitoring features
-          enabled: true
+          enabled: false
     # Name of the helm chart to deploy
     chart: common_components
   destination:
