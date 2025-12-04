@@ -1,0 +1,722 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    argocd.argoproj.io/tracking-id: common01:batch/Job:common01/init-bao
+  creationTimestamp: '2025-12-04T09:26:13Z'
+  generation: 1
+  labels:
+    batch.kubernetes.io/controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
+    batch.kubernetes.io/job-name: init-bao
+    controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
+    job-name: init-bao
+  name: init-bao
+  namespace: common01
+  resourceVersion: '6617675'
+  uid: aa012888-9779-4d2e-9c5d-802056a9776a
+spec:
+  backoffLimit: 6
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  selector:
+    matchLabels:
+      batch.kubernetes.io/controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
+  suspend: false
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        batch.kubernetes.io/controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
+        batch.kubernetes.io/job-name: init-bao
+        controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
+        job-name: init-bao
+    spec:
+      containers:
+        - command:
+            - sh
+            - '-c'
+            - 'echo "Final step: End the process"'
+          image: busybox
+          imagePullPolicy: Always
+          name: final-step
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data
+              name: init-bao-volume
+      dnsPolicy: ClusterFirst
+      initContainers:
+        - args:
+            - >
+              until wget --spider --quiet --timeout=10 --tries=1
+              --no-check-certificate $VAULT_ADDR 2>/dev/null; do
+                echo "Waiting for OpenBao to be accessible..."
+                sleep 5
+              done
+
+
+              bao operator init -format json >> /data/init.json || {
+                echo "Init failed (possibly already initialized), continuing..."
+              }
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+            - name: VAULT_SKIP_VERIFY
+              value: 'true'
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 0-init
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data
+              name: init-bao-volume
+        - args:
+            - >
+              timeout 300 bash -c 'while [ ! -f /data/init.json ]; do sleep 5;
+              done' || exit 1
+
+
+              UNSEAL_KEYS=$(cat /data/init.json | jq -r '.unseal_keys_b64[]')
+
+              ROOT_TOKEN=$(cat /data/init.json | jq -r '.root_token')
+
+
+              # Create secret with unseal keys
+
+              kubectl create secret generic secrets-unseal-keys \
+                --from-literal=key1=$(echo $UNSEAL_KEYS | cut -d' ' -f1) \
+                --from-literal=key2=$(echo $UNSEAL_KEYS | cut -d' ' -f2) \
+                --from-literal=key3=$(echo $UNSEAL_KEYS | cut -d' ' -f3) \
+                --from-literal=key4=$(echo $UNSEAL_KEYS | cut -d' ' -f2) \
+                --from-literal=key5=$(echo $UNSEAL_KEYS | cut -d' ' -f2) || true
+
+              # Create secret with root token
+
+              kubectl create secret generic secrets-root-token \
+                --from-literal=token=$ROOT_TOKEN || true
+          command:
+            - sh
+            - '-c'
+          image: bitnamilegacy/kubectl:latest
+          imagePullPolicy: Always
+          name: 1-bao-secret
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data
+              name: init-bao-volume
+        - args:
+            - |
+              bao operator unseal $key1
+              bao operator unseal $key2
+              bao operator unseal $key3
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+          envFrom:
+            - secretRef:
+                name: secrets-unseal-keys
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 2-unseal
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - |
+              bao secrets enable -path=secret -version=2 kv || true
+              bao secrets enable -path=secret -version=2 kv || true
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 3-kv-secretengine
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - |
+              bao secrets enable -path=transit/simpl transit || true
+              bao write transit/simpl/keys/gaia-x-key1 type=ed25519 || true
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 4-transit-secretengine
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - >
+              bao policy write secret-policy - <<EOF
+
+              path "secret/*" {
+                capabilities = ["create", "read", "update", "delete", "list"]
+              }
+
+              EOF
+
+
+              bao policy write eso-read-secrets - <<EOF
+
+              path "auth/kubernetes/login" {
+                capabilities = ["update"]
+              }
+
+              path "secret/data/cloud-accounts/*" {
+                capabilities = ["create", "read", "update", "list"]
+              }
+
+              path "secret/data/cloud-accounts/*/*" {
+                capabilities = ["create", "read", "update", "list"]
+              }
+
+              EOF
+
+
+
+
+
+
+
+              bao auth enable kubernetes || true
+
+              bao write auth/kubernetes/config kubernetes_host=https://10.3.0.1
+
+              bao write auth/kubernetes/role/secret-role \
+
+              bound_service_account_names="*-sa","*-service-account","*-service","*-consumption-be","*-svc-account",'*1',"default","keycloak","edc-connector-adapter"
+              \
+
+              bound_service_account_namespaces="authority01","dataprovider01","consumer01","common01","common01-vswh"
+              \
+
+              policies="secret-policy" || true
+
+
+              bao write auth/kubernetes/role/eso-role \
+
+              bound_service_account_names="eso" \
+
+              bound_service_account_namespaces="dataprovider01" \
+
+              policies="eso-read-secrets" \
+
+              ttl="24h" || true
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 5-kubernetes-policy-role
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - >
+              bao kv put -mount=secret common01-redpanda-credentials
+              admin=$redpanda_pass
+
+              bao kv put -mount=secret common01-pgadmin-credentials
+              password=$pgadmin_pass postgres=$postgres_pass
+
+              if ! bao kv get -mount=secret common01-notifications > /dev/null
+              2>&1; then
+                bao kv put -mount=secret common01-notifications \
+                  API_KEY=apikey \
+                  KAFKA_CLIENT_PASSWORDS=$notification \
+                  SMTP_PASSWORD=smtppass
+              fi
+
+              if ! bao kv get -mount=secret common01-icms > /dev/null 2>&1; then
+                bao kv put -mount=secret common01-icms \
+                  API_KEY=apikey \
+                  APPLICATION_KEY=applicationkey \
+                  APPLICATION_SECRET=appsecret \
+                  CONSUMER_KEY=conskey \
+                  KAFKA_CLIENT_PASSWORDS=$icms
+              fi
+
+              bao kv put -mount=secret common01-vault token=$VAULT_TOKEN
+
+              bao kv put -mount=secret common01-kafka-credentials \
+                redpanda=$redpanda \
+                notification=$notification \
+                icms=$icms \
+                authority01_authprovider=$authority01_authprovider \
+                authority01_usersroles=$authority01_usersroles \
+                authority01_onboarding=$authority01_onboarding \
+                authority01_tier2gw=$authority01_tier2gw \
+                dataprovider01_authprovider=$dataprovider01_authprovider \
+                dataprovider01_usersroles=$dataprovider01_usersroles \
+                dataprovider01_contract=$dataprovider01_contract \
+                dataprovider01_infrabe=$dataprovider01_infrabe \
+                dataprovider01_tier2gw=$dataprovider01_tier2gw \
+                consumer01_authprovider=$consumer01_authprovider \
+                consumer01_usersroles=$consumer01_usersroles \
+                consumer01_contract=$consumer01_contract \
+                consumer01_contract_consumption=$consumer01_contract_consumption \
+                consumer01_tier2gw=$consumer01_tier2gw \
+                consumer01_edcconn=$consumer01_edcconn
+              bao kv put -mount=secret common01-mailpit admin=$mailpit_pass
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+            - name: redpanda_pass
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: redpanda-secret
+            - name: pgadmin_pass
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: pg-admin-secret
+            - name: postgres_pass
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: postgres.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: mailpit_pass
+              valueFrom:
+                secretKeyRef:
+                  key: ui
+                  name: mailpit-secrets
+          envFrom:
+            - secretRef:
+                name: kafka-users-secret
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 6-common-secrets
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - >
+              bao kv put -mount=secret authority01-xsfc-service \
+                DATASTORE_FILE_PATH="/var/lib/fc-service/filestore" \
+                FEDERATED_CATALOGUE_VERIFICATION_SIGNATURES="true" \
+                GRAPHSTORE_PASSWORD="neo12345" \
+                GRAPHSTORE_QUERY_TIMEOUT_IN_SECONDS="5" \
+                GRAPHSTORE_URI="bolt://xsfc-neo4j:7687" \
+                SPRING_DATASOURCE_PASSWORD=$authority01_fcservice \
+                SPRING_DATASOURCE_URL="jdbc:postgresql://pg-cluster.common01.svc.cluster.local:5432/authority01_fcservice" \
+                SPRING_DATASOURCE_USERNAME="authority01_fcservice" \
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector.common01.20.61.232.68.nip.io" \
+                OTEL_RESOURCE_ATTRIBUTES_DEPLOYMENT_ENVIRONMENT="20.61.232.68.nip.io" \
+                OTEL_SDK_DISABLED="false"
+              bao kv put -mount=secret authority01-adapter-simpl-backend \
+                FEDERATED_CATALOOGUE_CLIENT_URL="http://xsfc-service:8081" \
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector.common01.20.61.232.68.nip.io" \
+                OTEL_RESOURCE_ATTRIBUTES_DEPLOYMENT_ENVIRONMENT="20.61.232.68.nip.io" \
+                OTEL_SDK_DISABLED="false"
+              bao kv put -mount=secret authority01-redis \
+                rediscommander=$commander \
+                redis=$redis
+              bao kv put -mount=secret authority01-postgres-passwords \
+                authority01-authenticationprovider=$authority01_authenticationprovider \
+                authority01-ejbca=$authority01_ejbca \
+                authority01-identityprovider=$authority01_identityprovider \
+                authority01-keycloak=$authority01_keycloak \
+                authority01-onboarding=$authority01_onboarding \
+                authority01-securityattributesprovider=$authority01_securityattributesprovider \
+                authority01-usersroles=$authority01_usersroles
+              bao kv put -mount=secret authority01-keycloak
+              admin=$authority01_kcadmin
+
+              bao kv put -mount=secret authority01-ejbca
+              keystorepass=$authority01_ejbcakspass
+
+              if ! bao kv get -mount=secret authority01-simpl-schema-manager >
+              /dev/null 2>&1; then
+                bao kv put -mount=secret authority01-simpl-schema-manager \
+                  ADMIN_PASSWORD=VTg4xJo6jMd7XMU9 \
+                  FUSEKI_BASE_URL="http://fuseki-service.authority01.svc.cluster.local:3030"
+              fi    
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+            - name: authority01_kcadmin
+              valueFrom:
+                secretKeyRef:
+                  key: authority01
+                  name: keycloak-secrets
+            - name: authority01_ejbcakspass
+              valueFrom:
+                secretKeyRef:
+                  key: keystorepass
+                  name: ejbca-secret
+            - name: authority01_fcservice
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-fcservice.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_authenticationprovider
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-authenticationprovider.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_ejbca
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-ejbca.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_identityprovider
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-identityprovider.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_keycloak
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-keycloak.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_onboarding
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-onboarding.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_securityattributesprovider
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-securityattributesprovider.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: authority01_usersroles
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    authority01-usersroles.pg-cluster.credentials.postgresql.acid.zalan.do
+          envFrom:
+            - secretRef:
+                name: redis-secrets
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 6-authority-secrets
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - >
+              bao kv put -mount=secret dataprovider01-contract \
+                API_KEY="apikey" \
+                DB_URL="jdbc:postgresql://pg-cluster.common01.svc.cluster.local:5432/dataprovider01_contract" \
+                DB_USER="dataprovider01_contract" \
+                DBPASSWORD="$dataprovider01_contractdb" \
+                KAFKA_CLIENT_PASSWORDS="$dataprovider01_contract" \
+                KAFKA_CLIENT_USER="dataprovider01_contract"
+              bao kv put -mount=secret dataprovider01-postgres-passwords \
+                dataprovider01-authenticationprovider=$dataprovider01_authenticationproviderdb \
+                dataprovider01-keycloak=$dataprovider01_keycloakdb \
+                dataprovider01-usersroles=$dataprovider01_usersrolesdb \
+                dataprovider01-infrabe=$dataprovider01_infrabedb \
+                dataprovider01-edc=$dataprovider01_edcdb
+              bao kv put -mount=secret dataprovider01-redis \
+                rediscommander=$commander \
+                redis=$redis
+              bao kv put -mount=secret
+              dataprovider01-infra-adapter-simpl-backend \
+                ENGINE_PATH="/opt/plugins/hashicorp-vault-provider.so" \
+                HTTP_HOST="" \
+                HTTP_IDLE_TIMEOUT="120s" \
+                HTTP_PORT="8080" \
+                HTTP_READ_TIMEOUT="10s" \
+                HTTP_WRITE_TIMEOUT="10s" \
+                LOG_ENCODING="json" \
+                LOG_LEVEL="debug" \
+                VAULT_ADRESS="https://secrets.common01.20.61.232.68.nip.io" \
+                VAULT_TOKEN="$VAULT_TOKEN"
+              if ! bao kv get -mount=secret dataprovider01-infrastructure-be >
+              /dev/null 2>&1; then
+                bao kv put -mount=secret dataprovider01-infrastructure-be \
+                  gitea.token="giteatoken" \
+                  infrastructure.api.config.value="Bearer tok_uuid" \
+                  kafka.sasl.enabled=true \
+                  kafka.sasl.password="$dataprovider01_infrabe" \
+                  kafka.sasl.username="dataprovider01_infrabe" \
+                  spring.datasource.password="$dataprovider01_infrabedb" \
+                  spring.datasource.username="dataprovider01_infrabe" \
+                  spring.mail.password="smtppassword" \
+                  spring.mail.username="no-reply@simplservices.com" \
+                  vault.token="$VAULT_TOKEN"
+              fi
+
+              if ! bao kv get -mount=secret dataprovider01-simpl-edc > /dev/null
+              2>&1; then
+                bao kv put -mount=secret dataprovider01-simpl-edc \
+                  contractmanager_apikey="apikey" \
+                  edc_datasource_default_password="$dataprovider01_edcdb" \
+                  edc_datasource_policy_password="$dataprovider01_edcdb" \
+                  edc_ionos_access_key="accesskeystring" \
+                  edc_ionos_endpoint="s3-eu-central-1.ionoscloud.com" \
+                  edc_ionos_endpoint_region="de" \
+                  edc_ionos_secret_key="secretkeystring" \
+                  edc_ionos_token="tokenstring" \
+                  otel_experimental_log_level="debug" \
+                  otel_exporter_otlp_endpoint="http://collector.common01.20.61.232.68.nip.io" \
+                  otel_exporter_otlp_protocol="http/protobuf" \
+                  otel_instrumentation_http_url_connection_enabled="false" \
+                  otel_instrumentation_jdbc_enabled="false" \
+                  otel_instrumentation_jersey_enabled="false" \
+                  otel_instrumentation_servlet_enabled="false" \
+                  otel_logs_exporter="none" \
+                  otel_metrics_exporter="none" \
+                  otel_resource_attributes="service.name=edc,deployment.environment=dataprovider01" \
+                  otel_traces_exporter="otlp"
+              fi
+
+              bao kv put -mount=secret dataprovider01-keycloak
+              admin=$dataprovider01_kcadmin
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+            - name: dataprovider01_kcadmin
+              valueFrom:
+                secretKeyRef:
+                  key: dataprovider01
+                  name: keycloak-secrets
+            - name: dataprovider01_gitea
+              valueFrom:
+                secretKeyRef:
+                  key: gitops_test
+                  name: gitea-secrets
+            - name: dataprovider01_contractdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-contract.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: dataprovider01_edcdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-edc.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: dataprovider01_infrabedb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-infrabe.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: dataprovider01_authenticationproviderdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-authenticationprovider.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: dataprovider01_keycloakdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-keycloak.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: dataprovider01_usersrolesdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    dataprovider01-usersroles.pg-cluster.credentials.postgresql.acid.zalan.do
+          envFrom:
+            - secretRef:
+                name: kafka-users-secret
+            - secretRef:
+                name: redis-secrets
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 6-provider-secrets
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        - args:
+            - >
+              bao kv put -mount=secret consumer01-contract \
+                API_KEY="apikey" \
+                DB_URL="jdbc:postgresql://pg-cluster.common01.svc.cluster.local:5432/consumer01_contract" \
+                DB_USER="consumer01_contract" \
+                DBPASSWORD="$consumer01_contractdb" \
+                KAFKA_CLIENT_PASSWORDS="$consumer01_contract" \
+                KAFKA_CLIENT_USER="consumer01_contract"
+              bao kv put -mount=secret consumer01-contract-consumption-be \
+                KAFKA_AUTH_SASL_PASSWORD="$consumer01_contract_consumption" \
+                KAFKA_AUTH_SASL_USERNAME="consumer01_contract_consumption"
+              bao kv put -mount=secret consumer01-redis \
+                rediscommander=$commander \
+                redis=$redis
+              bao kv put -mount=secret consumer01-edc-connector-adapter \
+                KAFKA_AUTH_SASL_PASSWORD="$consumer01_edcconn" \
+                KAFKA_AUTH_SASL_USERNAME="consumer01_edcconn"
+              bao kv put -mount=secret consumer01-postgres-passwords \
+                consumer01-authenticationprovider=$consumer01_authenticationproviderdb \
+                consumer01-keycloak=$consumer01_keycloakdb \
+                consumer01-usersroles=$consumer01_usersrolesdb \
+                consumer01-edc=$consumer01_edcdb
+              bao kv put -mount=secret consumer01-keycloak
+              admin=$consumer01_kcadmin
+
+              if ! bao kv get -mount=secret consumer01-simpl-edc > /dev/null
+              2>&1; then
+                bao kv put -mount=secret consumer01-simpl-edc \
+                  contractmanager_apikey="apikey" \
+                  edc_datasource_default_password="$consumer01_edcdb" \
+                  edc_datasource_policy_password="$consumer01_edcdb" \
+                  edc_ionos_access_key="accesskeystring" \
+                  edc_ionos_endpoint="s3-eu-central-1.ionoscloud.com" \
+                  edc_ionos_endpoint_region="de" \
+                  edc_ionos_secret_key="secretkeystring" \
+                  edc_ionos_token="tokenstring" \
+                  otel_experimental_log_level="debug" \
+                  otel_exporter_otlp_endpoint="http://collector.common01.20.61.232.68.nip.io" \
+                  otel_exporter_otlp_protocol="http/protobuf" \
+                  otel_instrumentation_http_url_connection_enabled="false" \
+                  otel_instrumentation_jdbc_enabled="false" \
+                  otel_instrumentation_jersey_enabled="false" \
+                  otel_instrumentation_servlet_enabled="false" \
+                  otel_logs_exporter="none" \
+                  otel_metrics_exporter="none" \
+                  otel_resource_attributes="service.name=edc,deployment.environment=consumer01" \
+                  otel_traces_exporter="otlp"
+              fi
+          command:
+            - sh
+            - '-c'
+          env:
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  key: token
+                  name: secrets-root-token
+            - name: VAULT_ADDR
+              value: https://secrets.common01.20.61.232.68.nip.io
+            - name: consumer01_kcadmin
+              valueFrom:
+                secretKeyRef:
+                  key: consumer01
+                  name: keycloak-secrets
+            - name: consumer01_contractdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    consumer01-contract.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: consumer01_edcdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    consumer01-edc.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: consumer01_authenticationproviderdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    consumer01-authenticationprovider.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: consumer01_keycloakdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    consumer01-keycloak.pg-cluster.credentials.postgresql.acid.zalan.do
+            - name: consumer01_usersrolesdb
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: >-
+                    consumer01-usersroles.pg-cluster.credentials.postgresql.acid.zalan.do
+          envFrom:
+            - secretRef:
+                name: kafka-users-secret
+            - secretRef:
+                name: redis-secrets
+          image: quay.io/openbao/openbao:2.4.0
+          imagePullPolicy: IfNotPresent
+          name: 6-consumer-secrets
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: openbao-common01-svc-account
+      serviceAccountName: openbao-common01-svc-account
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: init-bao-volume
+          persistentVolumeClaim:
+            claimName: init-bao-common01-pvc
+status:
+  failed: 6
+  ready: 0
+  startTime: '2025-12-04T09:26:13Z'
+  terminating: 0
+  uncountedTerminatedPods: {}
+
