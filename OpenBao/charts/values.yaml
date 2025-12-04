@@ -1,0 +1,21 @@
+agentList:
+  authorities:
+    - authority01
+  consumers:
+    - consumer01
+  providers:
+    - dataprovider01
+
+secrets:
+  role: "governance"
+  secretEngine: secrets
+
+namespaceTag: common01
+
+cluster:
+  namespace: common01
+
+domainSuffix: 20.61.232.68.nip.io
+
+mailpit:
+  enabled: true
