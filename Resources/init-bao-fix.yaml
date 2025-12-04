@@ -2,15 +2,15 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   annotations:
-    argocd.argoproj.io/tracking-id: common01:batch/Job:common01/init-bao
+    argocd.argoproj.io/tracking-id: common01:batch/Job:common01/init-bao-fix
   creationTimestamp: '2025-12-04T09:26:13Z'
   generation: 1
   labels:
     batch.kubernetes.io/controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
-    batch.kubernetes.io/job-name: init-bao
+    batch.kubernetes.io/job-name: init-bao-fix
     controller-uid: aa012888-9779-4d2e-9c5d-802056a9776a
-    job-name: init-bao
-  name: init-bao
+    job-name: init-bao-fix
+  name: init-bao-fix
   namespace: common01
   resourceVersion: '6617675'
   uid: aa012888-9779-4d2e-9c5d-802056a9776a
