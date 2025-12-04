@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: init-bao-fix
+  name: init-bao
 spec:
   template:
     spec:
@@ -512,10 +512,10 @@ spec:
         image: busybox
         command: ['sh', '-c', 'echo "Final step: End the process"']
         volumeMounts:
-        - name: init-bao-fix-volume
+        - name: init-bao-volume
           mountPath: /data
       restartPolicy: Never
       volumes:
-      - name: init-bao-fix-volume
+      - name: init-bao-volume
         persistentVolumeClaim:
-          claimName: init-bao-fix-{{ .Values.cluster.namespace }}-pvc
+          claimName: init-bao-{{ .Values.cluster.namespace }}-pvc
