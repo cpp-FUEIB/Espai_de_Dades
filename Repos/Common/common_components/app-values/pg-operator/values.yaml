@@ -1,4 +1,0 @@
-podServiceAccount:
-  # The name of the ServiceAccount to be used by postgres cluster pods
-  # If not set a name is generated using the fullname template and "-pod" suffix
-  name: ""

@@ -1,5 +1,0 @@
-deployment:
-  replicas: 1
-  kafka:
-    clientUser: icms
-environment: default
