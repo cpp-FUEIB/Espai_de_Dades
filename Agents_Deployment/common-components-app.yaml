@@ -14,7 +14,7 @@ spec:
       values: |
         values:
           branch: v2.4.2                            # branch of repo with values
-        resourcePreset: default                     # set to "low" to disable requests of resources
+        resourcePreset: low                     # set to "low" to disable requests of resources
         agentList:                                  # list of all the agents to be deployed
           authorities:
             - authority01
@@ -24,7 +24,7 @@ spec:
             - dataprovider01
         project: default                            # Project to which the namespace is attached
         namespaceTag: common01                      # identifier of deployment and part of fqdn
-        domainSuffix: argocd.ibtourismdataspace.org                  # last part of fqdn
+        domainSuffix: ibtourismdataspace.org                  # last part of fqdn
         argocd:
           appname: common01                         # name of generated argocd app 
           namespace: argocd                         # namespace of your argocd
@@ -32,14 +32,14 @@ spec:
           # FQDN Fully Qualified Domain Name of your kubernetes cluster
           address: https://kubernetes.default.svc
           namespace: common01                       # where the app will be deployed
-          issuer: dev-prod                          # issuer of certificate
+          issuer: letsencrypt-azure                          # issuer of certificate
           internalIssuer: dev-selfsigned            # issuer of self-signed certificates
           kubeStateHost: kube-prometheus-stack-kube-state-metrics.devsecopstools.svc.cluster.local:8080    # link to kube-state-metrics svc
         secrets:
           secretEngine: example                     # name of the kv secret engine that will be created in OpenBao
           role: example-role                        # name of the role that will be created in OpenBao
         kafka:
-          ha: true                                  # true creates 3 replicas of each component, false creates 1 of each
+          ha: false                                  # true creates 3 replicas of each component, false creates 1 of each
           topic:
             # set this value to true, to have kafka creating automatically the required topics
             autocreate: true
@@ -48,7 +48,7 @@ spec:
           enabled: true
         monitoring:
           # set this value to true, to enable the monitoring features
-          enabled: true
+          enabled: false
     # Name of the helm chart to deploy
     chart: common_components
   destination:
