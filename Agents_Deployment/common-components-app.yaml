@@ -36,8 +36,8 @@ spec:
           internalIssuer: dev-selfsigned            # issuer of self-signed certificates
           kubeStateHost: kube-prometheus-stack-kube-state-metrics.devsecopstools.svc.cluster.local:8080    # link to kube-state-metrics svc
         secrets:
-          secretEngine: example                     # name of the kv secret engine that will be created in OpenBao
-          role: example-role                        # name of the role that will be created in OpenBao
+          secretEngine: common01                     # name of the kv secret engine that will be created in OpenBao
+          role: common01-role                        # name of the role that will be created in OpenBao
         kafka:
           ha: false                                  # true creates 3 replicas of each component, false creates 1 of each
           topic:
