@@ -2,7 +2,7 @@ GET TOKEN
 
 curl -L -X POST "https://authority.be.authority01.ibtourismdataspace.org/auth/realms/authority/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=frontend-cli" \
-  -d "username=m.t" \
-  -d "password=spainlivinglab" \
-  -d "grant_type=password"
+  -d "client_id=frontend-cli" \    #NO TOCAR
+  -d "username=m.t" \              #NO TOCAR
+  -d "password=spainlivinglab" \  #contraseña especificada en Keylock del usuario m.t
+  -d "grant_type=password"        #NO TOCAR
