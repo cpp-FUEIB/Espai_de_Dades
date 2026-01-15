@@ -1,0 +1,19 @@
+GET TOKEN 
+
+curl -L -X POST "https://authority.be.authority01.ibtourismdataspace.org/auth/realms/authority/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=frontend-cli" \    #NO TOCAR
+  -d "username=m.t" \              #NO TOCAR
+  -d "password=spainlivinglab" \  #contraseña especificada en Keylock del usuario m.t
+  -d "grant_type=password"        #NO TOCAR
+
+
+
+eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJRUDN3TF9jOUJhTG84SldRUmk3N255eFI2U0xuSHFSME9Yb2lLNmhZQnpZIn0.eyJleHAiOjE3NjcxMDY5NTEsImlhdCI6MTc2NzEwNjY1MSwianRpI
+joiMDY0MWIyYmMtNzRlYS00ZjIyLTgxZTktNjA3YTEzYjlhZTMxIiwiaXNzIjoiaHR0cHM6Ly9hdXRob3JpdHkuYmUuYXV0aG9yaXR5MDEuaWJ0b3VyaXNtZGF0YXNwYWNlLm9yZy9hdXRoL3JlYWxtcy9hdXRob3JpdHkiL
+CJzdWIiOiIzZmU4ZjhhMi02NjRjLTQ2ZGYtOTg1Ny0xY2JlMzg3MGQ4MzEiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZC1jbGkiLCJzaWQiOiI0NzM0MDJkYy1kNjk0LTQwZTQtYjAwNS01YmQ1ZjkwNWMyM2YiLC
+JhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIk5PVEFSWSJdfSwic2NvcGUiOiJwcm9maWxlIGVtYWlsIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJNaWNoZ
+WFsIFRob21wc29uIiwicHJlZmVycmVkX3VzZXJuYW1lIjoibS50IiwiZ2l2ZW5fbmFtZSI6Ik1pY2hlYWwiLCJjbGllbnQtcm9sZXMiOlsiTk9UQVJZIl0sImZhbWlseV9uYW1lIjoiVGhvbXBzb24iLCJlbWFpbCI6Im0udEBlbW
+FpbC5jb20iLCJpZGVudGl0eV9hdHRyaWJ1dGVzIjpbXX0.mO9h9FbUyZqfRqCeHXNc7_pbmItGz6o7-QaRp0HJPo9x5_3DSmp4w5d64dkmxFw_vJ2KGBcvRSd6bYGU5JIk7
+4X-Xs_l1Egh88eKMAcN5J9Fq-fVEq3eAMGhp1pvYiI5JyJFNc1d70gw-dsyGjOq5C9uziJK6TjG_nEebtmYPMogdwObjQz4rAMcH6rNfUcB8MALSVdV-qOGX4yQ7yoIZnuwS47Mnz39aofjFzI7jAp4U49COGW228egwe72
+UGIzpX_nYXfKApo6qudkYG9SCi6Fuyz0iqpYuVeHhgF2v4rsKz8p2GdiS5pJxbE4GfOff5Wcgu4p1teywrXlzAd07Q

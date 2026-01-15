@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: 'dataprovider01-deployer'             # name of the deploying app in argocd
+spec:
+  project: default
+  source:
+    repoURL: https://code.europa.eu/api/v4/projects/904/packages/helm/stable
+    path: '""'
+    targetRevision: 2.4.1
+    helm:
+      values: >
+        values:
+          branch: v2.4.1                    # branch of repo with values - for released version it should be the release branch
+        project: default
+
+        namespaceTag:
+          dataprovider: dataprovider01      # identifier of deployment and part of fqdn for this agent
+          authority: authority01            # identifier of deployment and part of fqdn for authority
+          common: common01                  # identifier of deployment and part of fqdn for common components
+        domainSuffix: ibtourismdataspace.org           # last part of fqdn
+
+        resourcePreset: low             # set to "low" to disable requests of
+        resources
+
+        argocd:
+          appname: dataprovider01           # name of generated argocd app 
+          namespace: argocd                 # namespace of your argocd
+        cluster:
+          address: https://kubernetes.default.svc
+          namespace: dataprovider01         # where the app will be deployed
+          commonToolsNamespace: common01    # namespace where main monitoring stack is deployed
+          issuer: letsencrypt-azure                  # issuer of certificates
+        secrets:
+          role: common01-role                # role created in OpenBao for access
+          secretEngine: common01             # secret engine name created in OpenBao
+        crossplane:
+          enabled: true                     # if infrastructure components should be deployed (there can be only one instance per cluster)
+          kafka:
+            username: dataprovider01_infrabe                  # name should be: namespace_infrabe e.g.: dataprovider01_infrabe
+            password: 2zTgdB23cTSOhXG9                  # take the password from common01-kafka-credentials OpenBao secret, key dataprovider01_infrabe
+          gitea:
+            username: gitops_test           # username of gitea
+            password: spainlivinglab01                  # password of gitea - the variable can take on any value (set it to your preference)
+        monitoring:
+          enabled: false                     # should monitoring be enabled
+    chart: data-provider
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dataprovider01

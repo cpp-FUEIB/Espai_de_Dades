@@ -1,0 +1,44 @@
+#!/bin/bash
+set -e
+ 
+# Port-forward (ejecutar en otra terminal si quieres que siga en ejecución)
+kubectl port-forward -n authority01 svc/authentication-provider 8080:8080 
+kubectl port-forward -n authority01 svc/identity-provider 8090:8080 
+ 
+export AUTHORITY_AUTH_PROVIDER=localhost:8080
+export AUTHORITY_IDENTITY_PROVIDER=localhost:8090
+ 
+echo "== Generating keypair =="
+curl -X POST "$AUTHORITY_AUTH_PROVIDER/v1/keypairs/generate"
+ 
+echo "== Generating CSR =="
+curl -X POST "$AUTHORITY_AUTH_PROVIDER/v1/csr/generate" \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "commonName": "t2.authority01.ibtourismdataspace.org",
+    "country": "ES",
+    "organization": "FUEIB",
+    "organizationalUnit": "FUEIB-DEV"
+  }' > csr.pem
+ 
+echo "== Creating Authority participant =="
+PARTICIPANT_ID=$(curl -X POST "$AUTHORITY_IDENTITY_PROVIDER/v1/participants" \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "organization": "FUEIB",
+    "participantType": "GOVERNANCE_AUTHORITY"
+  }' | sed -E 's/^"(.*)"$/\1/')
+ 
+echo "Participant created: $PARTICIPANT_ID"
+ 
+echo "== Uploading CSR =="
+curl -X POST "$AUTHORITY_IDENTITY_PROVIDER/v1/participants/$PARTICIPANT_ID/csr" \
+  -F "csr=@csr.pem"
+ 
+echo "== Downloading credentials =="
+curl "$AUTHORITY_IDENTITY_PROVIDER/v1/credentials/$PARTICIPANT_ID/download" \
+  -o cert.pem
+ 
+echo "== Uploading credentials =="
+curl -X POST "$AUTHORITY_AUTH_PROVIDER/v1/credentials" \
+  -F "credential=@cert.pem"
