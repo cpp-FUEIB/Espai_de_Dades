@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: onboarding-i18n
+  namespace: authority01
+data:
+  en.json: |
+{{- with (file "en.json") }}
+{{ . | indent 4 }}
+{{- end }}
