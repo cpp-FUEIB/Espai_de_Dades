@@ -1,0 +1,7 @@
+resources:
+  - patch-onboarding-deployment.yaml
+
+configMapGenerator:
+  - name: onboarding-i18n
+    files:
+      - en.json
