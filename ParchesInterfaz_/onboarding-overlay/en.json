@@ -1,6 +1,6 @@
 
 {
-  "title": "Welcome to SIMPL",
+  "title": "Bienvenido al ESDATIB",
   "common": {
     "yes": "Yes",
     "actionCompleted": "Action Complete",
@@ -16,7 +16,7 @@
     "reactivate": "Reactivate credentials"
   },
   "info": {
-    "title": "Welcome to SIMPL",
+    "title": "Bienvenido al ESDATIB",
     "subTitle": "In order to access this data space you will need the following:",
     "descriptionStep1": "Register to obtain new credentials. An email, organization name and participant type are required.",
     "descriptionStep2": "After logging in, complete the onboarding procedure",
@@ -24,7 +24,7 @@
     "button": "Register for this dataspace "
   },
   "requestApplication": {
-    "title": "Welcome to SIMPL",
+    "title": "Bienvenido al ESDATIB",
     "email": "Email address",
     "emailPlaceholder": "Enter a valid email address",
     "emailValidation": "Must be a valid email",
@@ -70,7 +70,7 @@
     "notValidChar": "Special character not allowed"
   },
   "requestOnboarding": {
-    "title": "Welcome to SIMPL",
+    "title": "Bienvenido al ESDATIB",
     "label": "Upload file",
     "inputLabel": "Upload",
     "downloadFile": "Download",
@@ -303,7 +303,7 @@
     "identityAvailable": "The are {{identityNumbers}} identity attributes available for this application."
   },
   "status": {
-    "title": "Welcome to SIMPL",
+    "title": "Bienvenido al ESDATIB",
     "subTitle": "You successfully completed your onboarding request an account.",
     "subSubTitle": "Find below your request status:",
     "step1": "Request submitted",
