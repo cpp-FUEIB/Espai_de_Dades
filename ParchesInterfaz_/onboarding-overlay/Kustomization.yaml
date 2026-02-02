@@ -3,5 +3,6 @@ resources:
 
 configMapGenerator:
   - name: onboarding-i18n
+    namespace: authority01
     files:
       - en.json
