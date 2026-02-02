@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simpl-fe-onboarding
+  namespace: authority01
+spec:
+  template:
+    spec:
+      volumes:
+        - name: onboarding-i18n
+          configMap:
+            name: onboarding-i18n
+      containers:
+        - name: simpl-fe-onboarding
+          volumeMounts:
+            - name: onboarding-i18n
+              mountPath: /usr/share/nginx/html/onboarding/assets/i18n/en.json
+              subPath: en.json
+            - name: onboarding-i18n
+              mountPath: /usr/share/nginx/html/onboarding/assets/i18n-ecl/en.json
+              subPath: en.json
+            - name: onboarding-i18n
+              mountPath: /usr/share/nginx/html/onboarding/assets/i18n-eui/en.json
+              subPath: en.json
